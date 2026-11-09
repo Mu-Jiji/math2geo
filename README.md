@@ -301,6 +301,8 @@ python tools/ggb_check.py out/xxx/geogebra_dynamic.txt
 
 本项目代码采用 **MIT License**，完整文本见 [LICENSE](LICENSE)。
 
+第三方组件的署名与许可见 [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md)，其中 GeoGebra 相关材料不在 MIT 授权范围内，仅限非商业使用。
+
 第三方组件仍遵循各自许可：
 
 - `tools/deployggb.js`：GeoGebra Non-Commercial License；
