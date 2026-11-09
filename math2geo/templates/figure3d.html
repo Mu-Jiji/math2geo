@@ -1,0 +1,584 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>__TITLE__ · 3D</title>
+<style>
+  :root { --ink:#20242a; --muted:#5b6470; --line:#e6e8eb; --accent:#1f6fd0; --green:#1F5C46; }
+  * { box-sizing: border-box; }
+  ::-webkit-scrollbar { width:10px; height:10px; }
+  ::-webkit-scrollbar-track { background: transparent; }
+  ::-webkit-scrollbar-thumb { background:#CFE3D6; border-radius:999px; }
+  ::-webkit-scrollbar-thumb:hover { background:#A9CDB8; }
+  body { margin:0; font-family:"Microsoft YaHei", system-ui, sans-serif; color:var(--ink); background:#f6f7f9; }
+  header { padding:10px 20px; background:#fff; border-bottom:1px solid var(--line); }
+  header h1 { margin:0 0 3px; font-size:15px; }
+  header p { margin:0; font-size:12px; color:var(--muted); line-height:1.55; }
+  header .hint { color:var(--accent); margin-top:3px; }
+  .wrap { display:grid; grid-template-columns:minmax(0,1fr) 360px; gap:10px; padding:10px; align-items:start; }
+  .stage { position:relative; background:#fff; border:1px solid var(--line); border-radius:12px; overflow:hidden; height:min(74vh,660px); }
+  #ggb { width:100%; height:100%; }
+  .tools { position:absolute; z-index:5; top:10px; left:10px; display:flex; gap:8px; }
+  .tools button { border:1px solid #cfd8e3; background:rgba(255,255,255,.94); color:var(--green);
+                  border-radius:8px; padding:6px 10px; font-size:12px; cursor:pointer; }
+  .tools button:hover { background:#eef6ee; }
+  .side { display:flex; flex-direction:column; gap:10px; min-width:0; height:min(74vh,660px);
+          overflow-y:auto; padding-right:2px; }
+  .panel { background:#fff; border:1px solid var(--line); border-radius:12px; padding:12px;
+           display:flex; flex-direction:column; gap:8px; min-width:0; }
+  .panel-head { display:flex; align-items:center; gap:8px; }
+  .panel-head h2 { margin:0; font-size:14px; flex:1; }
+  .panel-head button { border:1px solid #cfd8e3; background:#fff; border-radius:7px; padding:3px 8px;
+                       font-size:12px; color:var(--muted); cursor:pointer; }
+  .panel-body { display:flex; flex-direction:column; gap:8px; min-height:0; }
+  .panel-body.collapsed { display:none; }
+  #solutionPanel { flex:1 0 220px; min-height:220px; }
+  #steps { flex:1; min-height:0; overflow:auto; padding-right:4px; }
+  .side-toolbar { display:flex; justify-content:flex-end; font-size:12px; color:var(--muted); }
+  .step { font-size:12px; line-height:1.65; padding:6px 0; border-bottom:1px dashed #eef1f4; }
+  .step b { color:#1b3a5c; }
+  #sec { width:100%; aspect-ratio:1/1; max-height:170px; background:#fff; border:1px solid #eef1f4; border-radius:10px; touch-action:none; cursor:grab; }
+  .ballrow { display:flex; align-items:center; gap:10px; }
+  #ball { width:86px; height:86px; border-radius:50%; touch-action:none; cursor:grab;
+          background:radial-gradient(circle at 34% 28%, #ffffff 0%, #eef6f0 40%, #d8e9de 100%);
+          box-shadow:inset 0 0 14px rgba(31,92,70,.14), 0 1px 3px rgba(0,0,0,.08); }
+  .ballinfo { font-size:12px; color:var(--muted); line-height:1.7; }
+  .ballinfo b { color:#1F5C46; font-weight:600; }
+  .row { display:flex; align-items:center; gap:6px; font-size:12px; color:var(--muted); flex-wrap:wrap; }
+  .row button { border:1px solid #cfd8e3; background:#fff; border-radius:8px; padding:4px 8px; cursor:pointer; font-size:12px; }
+  .plane-toggle { display:inline-flex; align-items:center; gap:4px; }
+  .plane-toggle input { accent-color:#1F5C46; }
+  .sliders { display:flex; flex-direction:column; gap:3px; font-size:12px; }
+  .sliders label { display:flex; align-items:center; gap:8px; }
+  .sliders input[type=range] { flex:1; -webkit-appearance:none; appearance:none; height:10px;
+    border-radius:999px; background:#DCEFE3; outline:none; }
+  .sliders input[type=range]::-webkit-slider-thumb { -webkit-appearance:none; appearance:none;
+    width:18px; height:18px; border-radius:50%; background:#1F5C46; cursor:pointer;
+    box-shadow:0 1px 3px rgba(0,0,0,.18); }
+  .sliders input[type=range]::-moz-range-thumb { width:18px; height:18px; border:none;
+    border-radius:50%; background:#1F5C46; cursor:pointer; }
+  .sliders input.color { width:52px; height:26px; padding:0; border:1px solid #D9E8DE; border-radius:7px; background:#fff; cursor:pointer; }
+  .sliders input.num { width:66px; padding:3px 6px; border:1px solid #D9E8DE; border-radius:7px;
+                       background:#FBFDFC; color:#223A2E; font-size:12px; }
+  .meta { display:none; }
+  details.cmds { margin:0 10px 16px; font-size:12px; }
+  details.cmds summary { cursor:pointer; color:var(--muted); }
+  details.cmds pre { background:#0f1420; color:#d7e0ea; padding:10px; border-radius:8px;
+                     overflow:auto; max-height:120px; font-size:11px; line-height:1.5; }
+  .beta { display:inline-block; padding:1px 7px; margin-left:6px; border-radius:999px;
+          background:#E8F3EC; color:#1F5C46; font-size:10px; font-weight:700;
+          border:1px solid #B9DCC8; vertical-align:middle; }
+  .warn { margin:0 10px 10px; padding:8px 12px; background:#fff8e6; border:1px solid #ffe3a3; border-radius:8px; font-size:12px; }
+  @media (max-width:900px){ .wrap{grid-template-columns:1fr;} .stage{height:60vh;} }
+</style>
+</head>
+<body>
+<header>
+  <h1>__TITLE__</h1>
+  <p>__PROBLEM__</p>
+  __HINT__
+</header>
+__WARN__
+<main class="wrap">
+  <section class="stage">
+    <div class="tools">
+      <button id="resetView">重置视角</button>
+      <button id="toggle3dAxes">隐藏三维坐标轴</button>
+      <button id="downloadGgb">下载 .ggb</button>
+    </div>
+    <div id="ggb"></div>
+  </section>
+  <aside class="side">
+    <div class="side-toolbar">
+      <label><input id="hideSection" type="checkbox"> 不显示截面</label>
+    </div>
+    <section class="panel" id="sectionPanel">
+      <div class="panel-head">
+        <h2>横截面（平面直角坐标系）</h2>
+        <button class="panel-toggle" data-target="sectionBody">收起</button>
+      </div>
+      <div class="panel-body" id="sectionBody">
+        <canvas id="sec" width="620" height="620"></canvas>
+        <div class="ballrow">
+          <canvas id="ball" width="240" height="240"></canvas>
+          <div class="ballinfo">
+            拖动这个<b>转球</b>改变截面方向<br>
+            红 / 绿 / 蓝 = x / y / z 轴<br>
+            <span id="ballval">方位 0° · 仰角 0°</span>
+          </div>
+        </div>
+        <div class="row">
+          <button id="toggle2dAxes">隐藏二维坐标轴</button>
+          <label class="plane-toggle"><input id="show3dPlane" type="checkbox"> 显示3D平面</label>
+          <span id="secInfo">截面：—</span>
+        </div>
+        <div class="sliders">
+          <label>方位 <input id="az" type="range" min="-180" max="180" step="1" value="__SECTION_AZ__"><input id="aznum" type="number" min="-180" max="180" step="1" value="__SECTION_AZ__" class="num"></label>
+          <label>仰角 <input id="el" type="range" min="-90" max="90" step="1" value="__SECTION_EL__"><input id="elnum" type="number" min="-90" max="90" step="1" value="__SECTION_EL__" class="num"></label>
+          <label>偏移 <input id="off" type="range" min="-5" max="5" step="0.1" value="__SECTION_OFF__"><input id="offnum" type="number" min="-5" max="5" step="0.1" value="__SECTION_OFF__" class="num"></label>
+          <label>截面图形颜色 <input id="secColor" type="color" value="#F2B84B" class="color"></label>
+        </div>
+        <div class="row">
+          <label class="plane-toggle"><input id="showCutPlane" type="checkbox"> 显示截面平面</label>
+          <label class="plane-toggle">平面大小 <input id="planeScale" type="range" min="0.5" max="4" step="0.1" value="1.2" style="width:90px"><span id="planeScaleVal">1.2×</span></label>
+        </div>
+        <div class="meta">滑杆、转球、右侧截面画布都可以改变方向；三维视图里仍可用鼠标自由旋转观察。</div>
+      </div>
+    </section>
+    <section class="panel" id="solutionPanel">
+      <div class="panel-head">
+        <h2>解答</h2>
+        <button class="panel-toggle" data-target="steps">收起</button>
+      </div>
+      <div class="panel-body" id="steps"></div>
+    </section>
+  </aside>
+</main>
+<details class="cmds">
+  <summary>查看 / 复制 GeoGebra 命令（__NCMDS__ 条）<span class="beta">Beta</span></summary>
+  <p><button id="copyCmds">复制全部命令</button><span class="beta">Beta</span> <span id="copyState"></span></p>
+  <pre id="cmdbox">__CMDS_TEXT__</pre>
+</details>
+<script>
+(function () {
+  function flash(msg) {
+    var st = document.getElementById('copyState');
+    if (st) st.textContent = msg;
+  }
+  function fallbackCopy(text) {
+    var ta = document.createElement('textarea');
+    ta.value = text;
+    ta.style.position = 'fixed';
+    ta.style.opacity = '0';
+    document.body.appendChild(ta);
+    ta.select();
+    var ok = false;
+    try { ok = document.execCommand('copy'); } catch (e) { ok = false; }
+    document.body.removeChild(ta);
+    return ok;
+  }
+  function wire() {
+    var btn = document.getElementById('copyCmds');
+    if (!btn || btn.dataset.wired) return;
+    btn.dataset.wired = '1';
+    btn.addEventListener('click', function () {
+      var box = document.getElementById('cmdbox');
+      var text = box ? box.textContent : '';
+      if (!text.trim()) { flash('没有命令可复制'); return; }
+      function done(ok) { flash(ok ? '已复制 ' + text.split('\n').length + ' 条命令' : '复制失败，请手动全选复制'); }
+      if (navigator.clipboard && window.isSecureContext) {
+        navigator.clipboard.writeText(text).then(function () { done(true); }, function () { done(fallbackCopy(text)); });
+      } else {
+        done(fallbackCopy(text));
+      }
+    });
+  }
+  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', wire);
+  else wire();
+  window.addEventListener('load', wire);
+})();
+</script>
+<script src="https://www.geogebra.org/apps/deployggb.js"></script>
+<script src="deployggb.js" onerror="void 0"></script>
+<script>
+const CMDS = __CMDS_JSON__;
+const STYLES = __STYLES_JSON__;
+const POINTS3D = __POINTS3D_JSON__;
+const STEPS = __STEPS_JSON__;
+const FACES = __FACES_JSON__;
+const AXES = __AXES__;
+let app = null;
+let show3dAxes = AXES;
+let show2dAxes = true;
+let show3dPlane = false;
+let showCutPlane = false;
+let planeScale = 1.2;
+let secFill = '#F2B84B';
+let dragging = null, lastX = 0, lastY = 0;
+let liveTimer = null;
+
+function dot(a,b){return a[0]*b[0]+a[1]*b[1]+a[2]*b[2];}
+function sub(a,b){return [a[0]-b[0],a[1]-b[1],a[2]-b[2]];}
+function cross(a,b){return [a[1]*b[2]-a[2]*b[1], a[2]*b[0]-a[0]*b[2], a[0]*b[1]-a[1]*b[0]];}
+function norm(a){const l=Math.hypot(a[0],a[1],a[2])||1; return [a[0]/l,a[1]/l,a[2]/l];}
+
+function computeSection(azDeg, elDeg, off) {
+  const az=azDeg*Math.PI/180, el=elDeg*Math.PI/180;
+  const n=[Math.cos(el)*Math.cos(az), Math.cos(el)*Math.sin(az), Math.sin(el)];
+  const vals=Object.values(POINTS3D);
+  const ref=Math.abs(n[2])<0.95?[0,0,1]:[1,0,0];
+  const u=norm(cross(n,ref)), v=cross(n,u);
+  if(!vals.length) return {poly2:[], poly3:[], n, c:[0,0,0], u, v};
+  let cx=0,cy=0,cz=0; vals.forEach(p=>{cx+=p[0];cy+=p[1];cz+=p[2];});
+  cx/=vals.length; cy/=vals.length; cz/=vals.length;
+  const c=[cx+n[0]*off, cy+n[1]*off, cz+n[2]*off];
+  const d=dot(n,c);
+  const hits=[];
+  FACES.forEach(face=>{
+    const vs=face.map(k=>POINTS3D[k]).filter(Boolean);
+    if (vs.length<3) return;
+    for(let i=0;i<vs.length;i++){
+      const a=vs[i], b=vs[(i+1)%vs.length];
+      const da=dot(n,a)-d, db=dot(n,b)-d;
+      if(Math.abs(da)<1e-6) hits.push(a);
+      else if(da*db<0){const t=da/(da-db); hits.push([a[0]+(b[0]-a[0])*t,a[1]+(b[1]-a[1])*t,a[2]+(b[2]-a[2])*t]);}
+    }
+  });
+  const uniq=[];
+  hits.forEach(p=>{if(!uniq.some(q=>Math.hypot(p[0]-q[0],p[1]-q[1],p[2]-q[2])<1e-5)) uniq.push(p);});
+  if(uniq.length<3) return {poly2:[], poly3:[], n, c, u, v};
+  const withAng=uniq.map(p=>{const q=sub(p,c); return {p, a:Math.atan2(dot(q,v), dot(q,u))};});
+  withAng.sort((a,b)=>a.a-b.a);
+  return {
+    poly3: withAng.map(o=>o.p),
+    poly2: withAng.map(o=>{const q=sub(o.p,c); return [dot(q,u), dot(q,v)];}),
+    n, c, u, v
+  };
+}
+
+function hexToRgb(hex){
+  const h=(hex||'#E8A0BF').replace('#','');
+  return [parseInt(h.slice(0,2),16)||232, parseInt(h.slice(2,4),16)||160, parseInt(h.slice(4,6),16)||191];
+}
+function shade(hex, k){
+  return '#'+hexToRgb(hex).map(v=>Math.max(0,Math.min(255,Math.round(v*k))).toString(16).padStart(2,'0')).join('');
+}
+
+function set3dPlane(v) {
+  if(!app || !app.getXML || !app.setXML) return;
+  try{
+    let xml=app.getXML();
+    xml=xml.replace(/<plate[^>]*show="(true|false)"[^>]*\/>/, '<plate show="'+(v?'true':'false')+'"/>');
+    app.setXML(xml);
+  }catch(e){}
+}
+
+
+function drawSection(sec) {
+  const canvas=document.getElementById('sec'), ctx=canvas.getContext('2d');
+  const w=canvas.width, h=canvas.height, pad=46;
+  ctx.clearRect(0,0,w,h);
+  const poly=sec.poly2;
+  let xs=[0], ys=[0];
+  poly.forEach(p=>{xs.push(p[0]);ys.push(p[1]);});
+  const x0=Math.min(...xs), x1=Math.max(...xs), y0=Math.min(...ys), y1=Math.max(...ys);
+  const ccx=(x0+x1)/2, ccy=(y0+y1)/2;
+  const span=Math.max(x1-x0,y1-y0,1)*1.35;
+  const scale=Math.min(w-pad*2,h-pad*2)/span;
+  const mx=w/2,my=h/2;
+  const sx=x=>mx+(x-ccx)*scale, sy=y=>my-(y-ccy)*scale;
+  if(show2dAxes){
+    ctx.strokeStyle='#e8edf0';ctx.lineWidth=1;
+    for(let i=-6;i<=6;i++){
+      ctx.beginPath();ctx.moveTo(sx(ccx+i*span/12),0);ctx.lineTo(sx(ccx+i*span/12),h);ctx.stroke();
+      ctx.beginPath();ctx.moveTo(0,sy(ccy+i*span/12));ctx.lineTo(w,sy(ccy+i*span/12));ctx.stroke();
+    }
+    ctx.strokeStyle='#9aa3ad';ctx.lineWidth=2;
+    ctx.beginPath();ctx.moveTo(0,sy(0));ctx.lineTo(w,sy(0));ctx.stroke();
+    ctx.beginPath();ctx.moveTo(sx(0),0);ctx.lineTo(sx(0),h);ctx.stroke();
+    ctx.fillStyle='#5b6470';ctx.font='22px sans-serif';
+    ctx.fillText('u',w-26,sy(0)-8);ctx.fillText('v',sx(0)+8,24);
+  }
+  if(poly.length>=3){
+    ctx.beginPath();
+    poly.forEach((p,i)=>{const px=sx(p[0]),py=sy(p[1]); if(i===0)ctx.moveTo(px,py); else ctx.lineTo(px,py);});
+    const rgb=hexToRgb(secFill), dark=shade(secFill,0.78);
+    ctx.closePath(); ctx.fillStyle='rgba('+rgb.join(',')+',.45)';
+    ctx.strokeStyle=dark; ctx.lineWidth=2.5;
+    ctx.fill(); ctx.stroke();
+  }
+  document.getElementById('secInfo').textContent='截面：'+(poly.length>=3?poly.length+' 个顶点':'无交线');
+}
+
+function drawBall(azDeg, elDeg) {
+  const cv=document.getElementById('ball'), ctx=cv.getContext('2d');
+  const w=cv.width, h=cv.height, R=w/2-22, cx=w/2, cy=h/2;
+  ctx.clearRect(0,0,w,h);
+
+  const azR=azDeg*Math.PI/180, elR=elDeg*Math.PI/180;
+  function rot(p){
+    const ca=Math.cos(azR), sa=Math.sin(azR), ce=Math.cos(elR), se=Math.sin(elR);
+    const x=ca*p[0]-sa*p[1], y=sa*p[0]+ca*p[1], z=p[2];
+    return [x, ce*y-se*z, se*y+ce*z];
+  }
+  function pr(x,y,z){return [cx+(x-y)*0.72*R, cy-(z*0.92-(x+y)*0.08)*R];}
+  function ring(fn,color){
+    ctx.beginPath();
+    for(let i=0;i<=120;i++){
+      const t=i/120*Math.PI*2, p=rot(fn(t)), q=pr(p[0],p[1],p[2]);
+      if(i===0)ctx.moveTo(q[0],q[1]); else ctx.lineTo(q[0],q[1]);
+    }
+    ctx.strokeStyle=color;ctx.lineWidth=2.4;ctx.stroke();
+  }
+  ctx.beginPath();ctx.arc(cx,cy,R,0,Math.PI*2);
+  ctx.fillStyle='rgba(248,252,249,.72)';ctx.fill();
+  ctx.strokeStyle='#D9E8DE';ctx.lineWidth=2;ctx.stroke();
+
+  ring(t=>[0,Math.cos(t),Math.sin(t)], 'rgba(224,90,90,.8)');   // yz，绕 x 轴
+  ring(t=>[Math.cos(t),0,Math.sin(t)], 'rgba(70,150,90,.8)');   // xz，绕 y 轴
+  ring(t=>[Math.cos(t),Math.sin(t),0], 'rgba(70,110,200,.8)');  // xy，绕 z 轴
+
+  function axis(v,color,label){
+    const va=rot([-v[0],-v[1],-v[2]]), vb=rot(v);
+    const a=pr(va[0],va[1],va[2]), b=pr(vb[0],vb[1],vb[2]);
+    ctx.strokeStyle=color;ctx.lineWidth=2.2;
+    ctx.beginPath();ctx.moveTo(a[0],a[1]);ctx.lineTo(b[0],b[1]);ctx.stroke();
+    ctx.fillStyle=color;ctx.font='bold 17px sans-serif';
+    ctx.fillText(label,b[0]+4,b[1]-4);
+  }
+  axis([1,0,0],'#D9534F','x');
+  axis([0,1,0],'#3E8E5A','y');
+  axis([0,0,1],'#3E6FC4','z');
+
+  const az=azDeg*Math.PI/180, el=elDeg*Math.PI/180;
+  const nx=Math.cos(el)*Math.cos(az), ny=Math.cos(el)*Math.sin(az), nz=Math.sin(el);
+  const p=pr(nx,ny,nz);
+  ctx.strokeStyle='#1F5C46';ctx.lineWidth=3;
+  ctx.beginPath();ctx.moveTo(cx,cy);ctx.lineTo(p[0],p[1]);ctx.stroke();
+  ctx.beginPath();ctx.arc(p[0],p[1],7,0,Math.PI*2);ctx.fillStyle='#1F5C46';ctx.fill();
+  ctx.beginPath();ctx.arc(cx,cy,4,0,Math.PI*2);ctx.fillStyle='#8FD3A8';ctx.fill();
+  document.getElementById('ballval').textContent=
+    '方位 '+Math.round(azDeg)+'° · 仰角 '+Math.round(elDeg)+'°';
+}
+
+// —— 三维截面用“法向量 + 偏移”实时更新，而不是重建多边形 ——
+function syncCutPlane(sec) {
+  if(!showCutPlane || !app || sec.poly3.length<3) return;
+  const u=sec.u, v=sec.v, c=sec.c;
+  let radius=1;
+  Object.values(POINTS3D).forEach(p=>{radius=Math.max(radius, Math.hypot(p[0]-c[0],p[1]-c[1],p[2]-c[2]));});
+  const big=Math.max(1.0, radius*planeScale);
+  const corners=[[-1,-1],[1,-1],[1,1],[-1,1]].map(([a,b])=>[
+    c[0]+(u[0]*a+v[0]*b)*big, c[1]+(u[1]*a+v[1]*b)*big, c[2]+(u[2]*a+v[2]*b)*big]);
+  const fmt=p=>p.map(x=>x.toFixed(3)).join(',');
+  corners.forEach((p,i)=>{
+    const nm='Sec'+(i+1);
+    try{app.evalCommand(nm+'=('+fmt(p)+')');}catch(e){}
+    try{app.setVisible(nm,false);}catch(e){}
+    try{app.setLabelVisible(nm,false);}catch(e){}
+  });
+  try{app.evalCommand('secPlane=Polygon(Sec1,Sec2,Sec3,Sec4)');}catch(e){}
+  try{app.setVisible('secPlane',true);}catch(e){}
+  try{app.setFilling('secPlane',0.12);}catch(e){}
+  try{app.setColor('secPlane',143,211,168);}catch(e){}
+  try{app.setLineThickness('secPlane',0);}catch(e){}
+}
+
+function update3D(sec) {
+  if(!app) return;
+  const fmt=p=>p.map(x=>x.toFixed(2)).join(',');
+  ['secPlane','SecAxisO','SecAxisU','SecAxisV','SecAxisULine','SecAxisVLine'].forEach(n=>{
+    try{app.evalCommand('Delete('+n+')');}catch(e){}
+  });
+  for(let i=1;i<=4;i++){try{app.evalCommand('Delete(Sec'+i+')');}catch(e){}}
+  for(let i=1;i<=12;i++){try{app.evalCommand('Delete(secPoly'+i+')');}catch(e){}}
+  if(sec.poly3.length<3) return;
+  const cmds=[];
+  sec.poly3.forEach((p,i)=>{
+    const nm='SecS'+(i+1);
+    cmds.push(nm+'=('+fmt(p)+')');
+    cmds.push('SetVisible('+nm+',true)');
+    cmds.push('SetLabelVisible('+nm+',false)');
+    cmds.push('SetPointSize('+nm+',1)');
+  });
+  // 用三角扇代替单个多边形，避免共面误差导致 Polygon 未定义
+  const tri=[];
+  for(let i=2;i<sec.poly3.length;i++){
+    const nm='secPoly'+(tri.length+1);
+    tri.push(nm);
+    cmds.push(nm+'=Polygon(SecS1,SecS'+i+',SecS'+(i+1)+')');
+  }
+  cmds.forEach(cmd=>{try{app.evalCommand(cmd);}catch(e){}});
+  const dark=hexToRgb(shade(secFill,0.78));
+  tri.forEach(nm=>{
+    try{app.setVisible(nm,true);}catch(e){}
+    try{app.setLabelVisible(nm,false);}catch(e){}
+    try{app.setFilling(nm,0.8);}catch(e){}
+    try{app.setColor(nm,dark[0],dark[1],dark[2]);}catch(e){}
+    try{app.setLineThickness(nm,2);}catch(e){}
+    try{app.evalCommand('SetLayer('+nm+',9)');}catch(e){}
+  });
+  syncCutPlane(sec);
+}
+
+function refresh(drawGeo) {
+  const az=+document.getElementById('az').value;
+  const el=+document.getElementById('el').value;
+  const off=+document.getElementById('off').value;
+  document.getElementById('aznum').value=az;
+  document.getElementById('elnum').value=el;
+  document.getElementById('offnum').value=off.toFixed(1);
+  const sec=computeSection(az,el,off);
+  drawSection(sec);
+  drawBall(az,el);
+  if(drawGeo) schedule3D(sec);
+  return sec;
+}
+
+// 合并高频更新，拖动时也能保持同步
+let pendingSec=null;
+function schedule3D(sec){
+  pendingSec=sec;
+  if(liveTimer) return;
+  liveTimer=setTimeout(()=>{liveTimer=null; if(pendingSec) update3D(pendingSec);},70);
+}
+
+function onReady(api) {
+  app=api;
+  try{api.setErrorDialogsActive(false);}catch(e){}
+  try{api.setAxesVisible(show3dAxes,show3dAxes);}catch(e){}
+  try{api.evalCommand('ShowAxes('+(show3dAxes?'true':'false')+')');}catch(e){}
+  try{api.setGridVisible(false);}catch(e){}
+  set3dPlane(show3dPlane);
+  CMDS.forEach(c=>{try{api.evalCommand(c);}catch(e){}});
+  STYLES.forEach(s=>{
+    try{
+      if(s.color)api.setColor(s.name,s.color[0],s.color[1],s.color[2]);
+      if(s.thickness)api.setLineThickness(s.name,s.thickness);
+      if(s.pointSize)api.setPointSize(s.name,s.pointSize);
+      if(s.visible!==undefined)api.setVisible(s.name,s.visible);
+      if(s.labelVisible)api.setLabelVisible(s.name,true);
+      if(s.fill){const v=s.filling!==undefined?s.filling:0.22; try{api.setFilling(s.name,v);}catch(e){} try{api.evalCommand('SetFilling('+s.name+','+v+')');}catch(e){}}
+    }catch(e){}
+  });
+  for(let i=1;i<=12;i++){try{api.setFilling('af'+i,0.02);}catch(e){}}
+  const sec=refresh(false);
+  update3D(sec);
+  setTimeout(()=>{try{api.evalCommand('SetViewDirection((1,1,1))');}catch(e){} try{api.showAllObjects();}catch(e){} try{api.evalCommand('ZoomFit()');}catch(e){}},450);
+
+  document.getElementById('resetView').onclick=()=>{
+    try{api.evalCommand('SetViewDirection((1,1,1))');}catch(e){}
+    try{api.setCoordSystem(-6,6,-6,6,-6,6);}catch(e){}
+  };
+  document.getElementById('downloadGgb').onclick=function(){
+    try{
+      const b64=app.getBase64();
+      if(!b64) throw new Error('empty');
+      const a=document.createElement('a');
+      a.href='data:application/vnd.geogebra.file;base64,'+b64;
+      a.download='math2geo.ggb';
+      document.body.appendChild(a);a.click();a.remove();
+    }catch(e){alert('当前 GeoGebra 版本不支持直接导出 .ggb');}
+  };
+  document.getElementById('toggle3dAxes').onclick=function(){
+    show3dAxes=!show3dAxes;
+    try{api.setAxesVisible(show3dAxes,show3dAxes);}catch(e){}
+    try{api.evalCommand('ShowAxes('+(show3dAxes?'true':'false')+')');}catch(e){}
+    this.textContent=show3dAxes?'隐藏三维坐标轴':'显示三维坐标轴';
+  };
+  document.getElementById('toggle2dAxes').onclick=function(){
+    show2dAxes=!show2dAxes; refresh(false);
+    this.textContent=show2dAxes?'隐藏二维坐标轴':'显示二维坐标轴';
+  };
+  const stepsBox=document.getElementById('steps');
+  (STEPS||[]).forEach(st=>{
+    const el=document.createElement('div');
+    el.className='step';
+    el.innerHTML='<b>'+(st.title||'')+'</b><br>'+(st.body||'');
+    stepsBox.appendChild(el);
+  });
+  document.querySelectorAll('.panel-toggle').forEach(btn=>{
+    btn.onclick=function(){
+      const body=document.getElementById(this.dataset.target);
+      if(!body) return;
+      body.classList.toggle('collapsed');
+      this.textContent=body.classList.contains('collapsed')?'展开':'收起';
+    };
+  });
+  const hideSection=document.getElementById('hideSection');
+  hideSection.onchange=function(){
+    document.getElementById('sectionPanel').style.display=this.checked?'none':'';
+  };
+  const plane3dToggle=document.getElementById('show3dPlane');
+  plane3dToggle.addEventListener('change',()=>{
+    show3dPlane=plane3dToggle.checked;
+    set3dPlane(show3dPlane);
+  });
+  const cutToggle=document.getElementById('showCutPlane');
+  cutToggle.addEventListener('change',()=>{
+    showCutPlane=cutToggle.checked;
+    if(!showCutPlane){try{app.evalCommand('Delete(secPlane)');}catch(e){} for(let i=1;i<=4;i++){try{app.evalCommand('Delete(Sec'+i+')');}catch(e){}}}
+    refresh(true);
+  });
+  const scaleInput=document.getElementById('planeScale');
+  scaleInput.addEventListener('input',()=>{
+    planeScale=+scaleInput.value;
+    document.getElementById('planeScaleVal').textContent=planeScale.toFixed(1)+'×';
+    refresh(true);
+  });
+  const colorInput=document.getElementById('secColor');
+  colorInput.addEventListener('input',()=>{secFill=colorInput.value; refresh(true);});
+  colorInput.addEventListener('change',()=>{secFill=colorInput.value; refresh(true);});
+  ['az','el','off'].forEach(id=>{
+    const sl=document.getElementById(id), num=document.getElementById(id+'num');
+    sl.addEventListener('input',()=>{num.value=sl.value; refresh(true);});
+    num.addEventListener('change',()=>{
+      let v=parseFloat(num.value);
+      if(!isFinite(v)) v=+sl.value;
+      v=Math.max(+sl.min,Math.min(+sl.max,v));
+      sl.value=v; num.value=v; refresh(true);
+    });
+  });
+
+  // 截面画布拖动：左右转方位、上下转仰角
+  const secCv=document.getElementById('sec');
+  secCv.addEventListener('pointerdown',e=>{dragging='sec';lastX=e.clientX;lastY=e.clientY;secCv.setPointerCapture(e.pointerId);});
+  secCv.addEventListener('pointermove',e=>{
+    if(dragging!=='sec')return;
+    const az=document.getElementById('az'), el=document.getElementById('el');
+    az.value=Math.max(-180,Math.min(180,+az.value+(e.clientX-lastX)*0.6));
+    el.value=Math.max(-90,Math.min(90,+el.value-(e.clientY-lastY)*0.6));
+    lastX=e.clientX;lastY=e.clientY;refresh(true);
+  });
+  secCv.addEventListener('pointerup',()=>{dragging=null;});
+
+  // 转球拖动：球面上取点并反解方位/仰角
+  const ball=document.getElementById('ball');
+  function ballToAngles(e){
+    const r=ball.getBoundingClientRect();
+    const R=r.width/2-18;
+    let dx=(e.clientX-r.left-r.width/2)/R;
+    let dy=(e.clientY-r.top-r.height/2)/R;
+    const lim=R/(r.width/2);
+    const rad=Math.hypot(dx,dy);
+    if(rad>lim){dx=dx/rad*lim;dy=dy/rad*lim;}
+    // 反投影：px = (nx-ny)*0.72, py = -nz*0.92
+    const nz=Math.max(-1,Math.min(1,-dy/0.92));
+    const rest=Math.sqrt(Math.max(0,1-nz*nz));
+    const diff=dx/0.72;                 // nx-ny
+    const half=Math.sqrt(Math.max(0,(2*rest*rest-diff*diff)/4));
+    let nx=(diff/2)+half, ny=(diff/2)-half;
+    if(!isFinite(nx)||!isFinite(ny)){nx=rest;ny=0;}
+    // 用投影一致性校正：若 ny 过大则回退
+    return {az:Math.atan2(ny,nx)*180/Math.PI, el:Math.asin(nz)*180/Math.PI};
+  }
+  ball.addEventListener('pointerdown',e=>{dragging='ball';lastX=e.clientX;lastY=e.clientY;ball.setPointerCapture(e.pointerId);});
+  ball.addEventListener('pointermove',e=>{
+    if(dragging!=='ball')return;
+    const {az,el}=ballToAngles(e);
+    if(isFinite(az))document.getElementById('az').value=Math.round(az);
+    if(isFinite(el))document.getElementById('el').value=Math.round(el);
+    refresh(true);
+  });
+  ball.addEventListener('pointerup',()=>{dragging=null;});
+}
+
+window.addEventListener('load',function(){
+  if(typeof GGBApplet==='undefined'){
+    document.getElementById('ggb').innerHTML='无法加载 GeoGebra（需要联网或同目录 deployggb.js）';
+    refresh(false);return;
+  }
+  const box=document.getElementById('ggb').getBoundingClientRect();
+  const applet=new GGBApplet({
+    appName:'3d', width:Math.max(640,Math.round(box.width)), height:Math.max(480,Math.round(box.height)),
+    showToolBar:true, showAlgebraInput:false, showAlgebraView:false, showMenuBar:false,
+    showAxes:AXES, showGrid:false, showPlane:false, showResetIcon:true, showZoomButtons:true,
+    enableLabelDrags:true, enableShiftDragZoom:true, language:'zh', appletOnLoad:onReady
+  },true);
+  applet.inject('ggb');
+  refresh(false);
+});
+</script>
+</body>
+</html>

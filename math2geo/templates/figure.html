@@ -1,0 +1,302 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>__TITLE__ · GeoGebra</title>
+<style>
+  :root { --ink:#20242a; --muted:#5b6470; --line:#e6e8eb; --accent:#1f6fd0; }
+  * { box-sizing: border-box; }
+  body { margin:0; font-family:"Microsoft YaHei", system-ui, -apple-system, sans-serif;
+         color:var(--ink); background:#f6f7f9; }
+  header { padding:14px 22px; background:#fff; border-bottom:1px solid var(--line); }
+  header h1 { margin:0 0 6px; font-size:16px; font-weight:600; }
+  header p { margin:0; font-size:13px; color:var(--muted); line-height:1.7; }
+  header .hint { margin-top:6px; color:var(--accent); }
+
+  .layout { display:grid; grid-template-columns:minmax(0,1fr) 372px; gap:14px;
+            padding:14px 18px 8px; align-items:start; }
+  .stage { position:relative; }
+  .canvas-wrap { position:relative; }
+  #ggb { width:100%; height:min(72vh, 680px); background:#fff; border:1px solid var(--line);
+         border-radius:12px; overflow:hidden; }
+  .peek { position:absolute; bottom:14px; right:14px; z-index:5; border:1px solid #cfd8e3;
+          background:rgba(255,255,255,.95); color:var(--accent); border-radius:999px;
+          padding:6px 12px; font-size:12px; cursor:pointer; box-shadow:0 2px 8px rgba(0,0,0,.08); }
+  .peek:hover { background:#eef4fb; }
+
+  .status { margin-top:10px; font-size:13px; padding:8px 12px; border-radius:8px; }
+  .status.ok { background:#eef6ee; color:#25602c; }
+  .status.bad { background:#fdeeee; color:#a12a2a; line-height:1.7; }
+  .warn { margin-top:8px; font-size:12px; color:#8a5a00; background:#fff8e6;
+          border:1px solid #ffe3a3; padding:9px 12px; border-radius:8px; }
+  .warn ul { margin:6px 0 0 18px; padding:0; }
+
+  .panel { background:#fff; border:1px solid var(--line); border-radius:12px;
+           padding:14px 16px; max-height:min(72vh, 680px); overflow:auto; }
+  .panel-head { display:flex; align-items:center; justify-content:space-between; gap:8px; }
+  .panel-head h2 { margin:0; font-size:15px; }
+  .panel-head .close { border:0; background:transparent; font-size:18px; color:#9aa0a6; cursor:pointer; }
+  .step { border-top:1px dashed var(--line); padding:12px 0 10px; }
+  .step:first-child { border-top:0; }
+  .step h3 { margin:0 0 6px; font-size:13.5px; color:#1b3a5c; }
+  .step p { margin:0; font-size:13px; line-height:1.75; color:#333; white-space:pre-wrap; }
+  .step .go { margin-top:8px; border:1px solid #c9d8ea; background:#f3f8fe; color:var(--accent);
+              border-radius:8px; padding:5px 10px; font-size:12px; cursor:pointer; }
+  .step .go:hover { background:#e6f0fb; }
+  .step.active { background:#fff9f2; border-radius:8px; padding-left:8px; padding-right:8px; }
+  .panel-foot { margin-top:12px; font-size:12px; color:var(--muted); line-height:1.7; }
+  .panel-foot button { margin-top:8px; border:1px solid #cfd4da; background:#fff; border-radius:8px;
+                       padding:5px 10px; font-size:12px; cursor:pointer; }
+  .muted { color:var(--muted); font-size:13px; }
+
+  details.cmds { margin:6px 18px 26px; font-size:13px; }
+  details.cmds summary { cursor:pointer; color:var(--muted); }
+  details.cmds pre { background:#0f1420; color:#d7e0ea; padding:12px; border-radius:10px;
+                     overflow:auto; max-height:260px; font-size:12px; line-height:1.55; }
+  details.cmds button { font:inherit; padding:6px 12px; border-radius:6px; border:1px solid #cfd4da;
+                        background:#fff; cursor:pointer; }
+
+  @media (max-width: 980px) {
+    .layout { grid-template-columns:1fr; }
+    .panel { max-height:none; }
+    #ggb { height:62vh; }
+  }
+</style>
+</head>
+<body>
+<header>
+  <h1>__TITLE__</h1>
+  <p>__PROBLEM__</p>
+  __HINT__
+</header>
+
+<main class="layout">
+  <section class="stage">
+    <div class="canvas-wrap">
+      <div id="ggb"></div>
+      <button id="peek" class="peek">📖 解答步骤</button>
+    </div>
+    <div id="status" class="status">正在加载 GeoGebra…</div>
+    __WARN__
+  </section>
+
+  <aside id="panel" class="panel">
+    <div class="panel-head">
+      <h2>解答步骤</h2>
+      <button class="close" id="closePanel" title="收起">×</button>
+    </div>
+    <div id="steps"></div>
+    <div class="panel-foot">
+      点「在图中查看」会高亮对应的曲线 / 参考线，并把参数调到这一步需要的位置。
+      <br><button id="resetBtn">↺ 恢复初始图形</button>
+    </div>
+  </aside>
+</main>
+
+<details class="cmds">
+  <summary>查看 / 复制 GeoGebra 命令（__NCMDS__ 条）</summary>
+  <p><button onclick="copyCmds()">复制全部命令</button>
+     <button id="downloadGgb">下载 .ggb</button></p>
+  <pre id="cmdbox">__CMDS_TEXT__</pre>
+</details>
+
+<script src="https://www.geogebra.org/apps/deployggb.js"></script>
+<!-- 离线时把 deployggb.js 放到同目录即可，下面这行兜底 -->
+<script src="deployggb.js" onerror="void 0"></script>
+<script>
+const CMDS = __CMDS_JSON__;
+const STYLES = __STYLES_JSON__;
+const STEPS = __STEPS_JSON__;
+const BOUNDS = __BOUNDS_JSON__;
+const INIT = __INIT_JSON__;
+const AXES = __AXES__;
+const DIMENSION = '__DIMENSION__';
+
+let app = null;
+let failed = [];
+
+function escapeHtml(s) {
+  return String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+}
+
+
+function fitView() {
+  if (DIMENSION === '3D') return;
+  const el = document.getElementById('ggb');
+  const w = Math.max(320, el.clientWidth || 640);
+  const h = Math.max(240, el.clientHeight || 440);
+  let x0 = BOUNDS[0], x1 = BOUNDS[1], y0 = BOUNDS[2], y1 = BOUNDS[3];
+  const cx = (x0 + x1) / 2, cy = (y0 + y1) / 2;
+  let sx = x1 - x0, sy = y1 - y0;
+  const r = w / h;
+  if (sx / sy > r) { sy = sx / r; } else { sx = sy * r; }
+  try { app.setCoordSystem(cx - sx / 2, cx + sx / 2, cy - sy / 2, cy + sy / 2); } catch (e) {}
+}
+
+function onReady(api) {
+  app = api;
+  try { api.setErrorDialogsActive(false); } catch (e) {}
+  if (DIMENSION !== '3D') { try { api.setPerspective('G'); } catch (e) {} }
+  try { api.setAxesVisible(AXES, AXES); } catch (e) {}
+  try { api.setGridVisible(DIMENSION === '3D' ? false : AXES); } catch (e) {}
+  failed = [];
+  const dl = document.getElementById('downloadGgb');
+  if (dl) dl.onclick = function () {
+    try {
+      const b64 = app.getBase64();
+      const a = document.createElement('a');
+      a.href = 'data:application/vnd.geogebra.file;base64,' + b64;
+      a.download = 'math2geo.ggb';
+      document.body.appendChild(a); a.click(); a.remove();
+    } catch (e) { alert('当前 GeoGebra 版本不支持直接导出 .ggb'); }
+  };
+  CMDS.forEach(function (c, i) {
+    let ok = false;
+    try { ok = api.evalCommand(c); } catch (e) { ok = false; }
+    if (!ok) failed.push({ n: i + 1, cmd: c });
+  });
+  applyStyles();
+  fitView();
+  showStatus();
+}
+
+function applyStyles() {
+  STYLES.forEach(function (s) {
+    try {
+      if (s.color) app.setColor(s.name, s.color[0], s.color[1], s.color[2]);
+      if (s.thickness) app.setLineThickness(s.name, s.thickness);
+      if (s.style !== undefined && s.style !== null) app.setLineStyle(s.name, s.style);
+      if (s.pointSize) app.setPointSize(s.name, s.pointSize);
+      if (s.visible !== undefined) app.setVisible(s.name, s.visible);
+      if (s.labelVisible) app.setLabelVisible(s.name, true);
+      if (s.fill) {
+        const val = s.filling !== undefined ? s.filling : 0.18;
+        try { app.setFilling(s.name, val); } catch (e) {}
+        try { app.evalCommand('SetFilling(' + s.name + ',' + val + ')'); } catch (e) {}
+      }
+    } catch (e) {}
+  });
+}
+
+function highlight(name) {
+  try {
+    app.setVisible(name, true);
+    app.setColor(name, 231, 76, 60);
+    app.setLineThickness(name, 6);
+    app.setLineStyle(name, 0);
+  } catch (e) {}
+}
+
+function runAction(a) {
+  if (!a || !app) return;
+  if (a.set) Object.keys(a.set).forEach(function (k) {
+    try { app.setValue(k, a.set[k]); } catch (e) {}
+  });
+  if (a.eval) a.eval.forEach(function (c) {
+    try { app.evalCommand(c); } catch (e) {}
+  });
+  if (a.zoom) {
+    try { app.setCoordSystem(a.zoom[0], a.zoom[1], a.zoom[2], a.zoom[3]); } catch (e) {}
+  } else if (a.resetView) {
+    fitView();
+  }
+  if (a.focus) { applyStyles(); a.focus.forEach(highlight); }
+}
+
+function resetAll() {
+  if (!app) return;
+  Object.keys(INIT).forEach(function (k) { try { app.setValue(k, INIT[k]); } catch (e) {} });
+  applyStyles();
+  fitView();
+}
+
+function showStatus() {
+  const el = document.getElementById('status');
+  if (!failed.length) {
+    el.className = 'status ok';
+    el.textContent = '已生成图形，可以直接拖动参数滑动条。';
+  } else {
+    el.className = 'status bad';
+    el.innerHTML = '有 ' + failed.length + ' 条命令没生效：<br>' +
+      failed.map(function (f) { return '第' + f.n + '条：' + escapeHtml(f.cmd); }).join('<br>');
+  }
+}
+
+function renderSteps() {
+  const box = document.getElementById('steps');
+  if (!STEPS.length) {
+    box.innerHTML = '<p class="muted">这道题没有附带解答步骤。</p>';
+    return;
+  }
+  STEPS.forEach(function (s) {
+    const card = document.createElement('article');
+    card.className = 'step';
+    const h = document.createElement('h3');
+    h.textContent = s.title;
+    card.appendChild(h);
+    if (s.body) {
+      const p = document.createElement('p');
+      p.textContent = s.body;
+      card.appendChild(p);
+    }
+    if (s.action) {
+      const b = document.createElement('button');
+      b.className = 'go';
+      b.textContent = '▶ 在图中查看';
+      b.onclick = function () {
+        document.querySelectorAll('.step').forEach(function (e) { e.classList.remove('active'); });
+        card.classList.add('active');
+        runAction(s.action);
+      };
+      card.appendChild(b);
+    }
+    box.appendChild(card);
+  });
+}
+
+function copyCmds() {
+  const text = CMDS.join('\n');
+  if (navigator.clipboard) {
+    navigator.clipboard.writeText(text).then(
+      function () { document.querySelector('.cmds button').textContent = '已复制'; },
+      function () { alert('浏览器不允许自动复制，请手动选择命令文本'); }
+    );
+  } else {
+    alert('请手动选择命令文本复制');
+  }
+}
+
+document.getElementById('peek').onclick = function () {
+  document.getElementById('panel').scrollIntoView({ behavior: 'smooth', block: 'start' });
+};
+document.getElementById('closePanel').onclick = function () {
+  document.getElementById('panel').style.display = 'none';
+};
+document.getElementById('resetBtn').onclick = resetAll;
+
+renderSteps();
+
+window.addEventListener('load', function () {
+  if (typeof GGBApplet === 'undefined') {
+    const el = document.getElementById('status');
+    el.className = 'status bad';
+    el.textContent = '没能加载 GeoGebra（需要联网加载 deployggb.js，或把它放到本文件同目录）。命令文本仍然可以复制使用。';
+    return;
+  }
+  const box = document.getElementById('ggb').getBoundingClientRect();
+  const applet = new GGBApplet({
+    appName: DIMENSION === '3D' ? '3d' : 'classic',
+    width: Math.max(640, Math.round(box.width)),
+    height: Math.max(440, Math.round(box.height)),
+    showToolBar: true, showAlgebraInput: false, showMenuBar: false,
+    showAxes: __AXES__, showGrid: DIMENSION === '3D' ? false : __AXES__,
+    showResetIcon: true, enableLabelDrags: true, enableShiftDragZoom: true,
+    language: 'zh',
+    appletOnLoad: onReady
+  }, true);
+  applet.inject('ggb');
+});
+</script>
+</body>
+</html>

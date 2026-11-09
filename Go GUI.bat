@@ -1,0 +1,1 @@
+python -m math2geo gui 

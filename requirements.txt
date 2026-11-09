@@ -1,0 +1,8 @@
+# math2geo 运行依赖（Python 3.10+）
+numpy>=1.24
+pillow>=10.0
+sympy>=1.12
+matplotlib>=3.7
+
+# 图形界面（python -m math2geo gui 才需要）
+PySide6>=6.6

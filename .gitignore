@@ -1,0 +1,16 @@
+# 运行产物
+out/
+dist/
+build/
+build_pyinstaller.log
+*.pyc
+__pycache__/
+.pytest_cache/
+
+# 历史功能缓存（已移除 OCR / Pix2Text）
+.pix2text/
+.math2geo_cache/
+_tmp/
+*.log
+.venv/
+.env
