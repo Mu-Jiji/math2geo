@@ -37,8 +37,7 @@
 python -m pip install -r requirements.txt
 ```
 
-Windows 用户也可以双击 `install.bat`。它会自动寻找可用的 Python，安装依赖，默认源失败时
-切换到清华镜像，最后做一次环境自检。
+Windows 用户也可以双击 `install_deps.bat`。它会自动寻找可用的 Python，安装依赖。
 
 主要依赖：
 
