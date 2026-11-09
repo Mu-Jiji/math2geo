@@ -11,11 +11,12 @@ import argparse
 import os
 import sys
 
-from . import pipeline
+from . import __version__, pipeline
 
 
 def _build_parser() -> argparse.ArgumentParser:
     p = argparse.ArgumentParser(prog="math2geo", description="拍题 → AI 理解 → GeoGebra / 几何画板 作图")
+    p.add_argument("--version", action="version", version=f"%(prog)s {__version__}")
     sub = p.add_subparsers(dest="cmd")
 
     r = sub.add_parser("run", help="处理一道题（照片或文字）")

@@ -1,5 +1,7 @@
 # math2geo：拍一道题，AI 读懂，画出 GeoGebra 图形
 
+**版本：261109_beta**
+
 题目拍下来，交给模型读懂；坐标由本地程序算准，再输出成能直接打开的 GeoGebra 页面。
 
 没有 OCR、没有本地题库、没有手写几何语法。模型负责理解题意，`construct.py` 负责把
@@ -53,11 +55,13 @@ Windows 用户也可以双击 `install.bat`。它会自动寻找可用的 Python
 
 ## 二、配置 API
 
-按以下顺序查找 Key：
+命令行按以下顺序查找 Key：
 
 1. 启动参数 `--ai-key sk-...`
 2. 环境变量 `MATH2GEO_API_KEY` / `DEEPSEEK_API_KEY`
-3. 图形界面「模型预设」里保存的 Key（存于 `%APPDATA%\math2geo\config.json`）
+
+图形界面则直接使用「模型预设」里保存的 Key（存于 `%APPDATA%\math2geo\config.json`）；
+如果界面的 API Key 留空，程序会按「Key 环境变量」里填的名字去系统环境变量里取。
 
 注意两个容易混淆的字段：
 
@@ -81,6 +85,12 @@ Windows 用户也可以双击 `install.bat`。它会自动寻找可用的 Python
 
 ```powershell
 python -m math2geo gui
+```
+
+查看版本：
+
+```powershell
+python -m math2geo --version
 ```
 
 也可以用 `Go GUI.bat` 启动。
@@ -221,6 +231,7 @@ math2geo/
 ├─ tests/run_tests.py     单元测试 + GUI 冒烟
 ├─ tools/                 依赖检查、动画生成、GeoGebra 验证、离线脚本
 ├─ packaging/             PyInstaller 配置
+├─ build_exe.bat          Windows 打包脚本
 ├─ VERSION                当前版本号
 └─ requirements.txt
 ```
@@ -289,4 +300,16 @@ python tools/ggb_check.py out/xxx/geogebra_dynamic.txt
 
 ## 许可
 
-©2026 Mu-Jiji @ GitHub All Rights Reserved
+本项目代码采用 **MIT License**。
+
+第三方组件仍遵循各自许可：
+
+- `tools/deployggb.js`：GeoGebra Non-Commercial License；
+- PySide6 / Qt：LGPL；
+- NumPy、Pillow、SymPy、Matplotlib：各自的开源许可。
+
+使用或分发时请同时遵守这些第三方许可。
+
+---
+
+©2026 Mu-Jiji @ GitHub
