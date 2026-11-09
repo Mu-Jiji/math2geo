@@ -299,7 +299,7 @@ python tools/ggb_check.py out/xxx/geogebra_dynamic.txt
 
 ## 许可
 
-本项目代码采用 **MIT License**。
+本项目代码采用 **MIT License**，完整文本见 [LICENSE](LICENSE)。
 
 第三方组件仍遵循各自许可：
 
